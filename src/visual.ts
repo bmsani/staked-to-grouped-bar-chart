@@ -25,16 +25,6 @@
 */
 "use strict";
 
-// import "./../style/visual.less";
-// import powerbi from "powerbi-visuals-api";
-// import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
-// import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
-// import IVisual = powerbi.extensibility.visual.IVisual;
-// import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
-// import VisualObjectInstance = powerbi.VisualObjectInstance;
-// import DataView = powerbi.DataView;
-// import VisualObjectInstanceEnumerationObject = powerbi.VisualObjectInstanceEnumerationObject;
-
 import "./../style/visual.less";
 import powerbi from "powerbi-visuals-api";
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -51,10 +41,6 @@ type Selection<T extends d3.BaseType> = d3.Selection<T, any, any, any>;
 
 import { VisualSettings } from "./settings";
 export class Visual implements IVisual {
-    // private target: HTMLElement;
-    // private updateCount: number;
-    // private settings: VisualSettings;
-    // private textNode: Text;
 
     private host: IVisualHost;
     private target: HTMLElement;
@@ -79,68 +65,31 @@ export class Visual implements IVisual {
     public update(options: VisualUpdateOptions) {
         this.settings = Visual.parseSettings(options && options.dataViews && options.dataViews[0]);
         console.log('Visual update', options);
-        const dataView = options.dataViews[0];
+        const dataView = options.dataViews[0].categorical.values.map((values, i) => values.values);
+        console.log('this is dataview ',dataView);
         const viewport = options.viewport;
         const chartGrouped = this.settings.viewSettings.chartView
         console.log(chartGrouped);
 
         this.svg.selectAll("*").remove();
 
-        // let margin = { top: 40, right: 10, bottom: 20, left: 10 }
-        // let width: number = options.viewport.width - margin.left - margin.right;
-        // let height: number = options.viewport.height - margin.top - margin.bottom;
-
-        let n: number = 4
-        let m = 43
+        let n = dataView.length
+        let m = dataView[0].length
         let xz: any = d3.range(m)
-        let yz = d3.range(n).map(() => bumps(m))
-        console.log(n, m, xz, yz);
-        function bumps(m: number) {
-            const values = [];
-
-            // Initialize with uniform random values in [0.1, 0.2).
-            for (let i = 0; i < m; ++i) {
-                values[i] = 0.1 + 0.1 * Math.random();
-            }
-
-            // Add five random bumps.
-            for (let j = 0; j < 5; ++j) {
-                const x = 1 / (0.1 + Math.random());
-                const y = 2 * Math.random() - 0.5;
-                const z = 10 / (0.1 + Math.random());
-                for (let i = 0; i < m; i++) {
-                    const w = (i / m - y) * z;
-                    values[i] += x * Math.exp(-w * w);
-                }
-            }
-
-            // Ensure all values are positive.
-            for (let i = 0; i < m; ++i) {
-                values[i] = Math.max(0, values[i]);
-            }
-
-            return values;
-        }
-
-
-        // const y01z = d3.stack()
-        //     .keys(d3.range(n))
-        //     (d3.transpose(yz)) // stacked yz
-        //     .map((data, i) => data.map(([y0, y1]) => [y0, y1, i]));
+        
 
         const stack: any = d3.stack()
             .keys(d3.range(n).map(String));
 
-        const y01z = stack(d3.transpose(yz))
-            .map((data, i) => data.map(([y0, y1]) => [y0, y1, i]));
+        const y01z = stack(d3.transpose(dataView))
+        .map((data, i) => data.map(([y0, y1]) => [y0, y1, i]));
 
         console.log(y01z);
-        const yMax = d3.max(yz, y => d3.max(y));
+        // const yMax = d3.max(dataView, y => d3.max(y));
+        const yMax = d3.max(dataView as number[][], y => d3.max(y as number[]));
         // const y1Max = d3.max(y01z, y => d3.max(y, d => d[1]));
         const y1Max = d3.max(y01z, (d: any[]) => d3.max(d, (inner: any) => inner[1] as number)) as number;
 
-        // const xz = d3.range(m);
-        //     const yz = d3.range(n).map(() => this.bumps(m));
 
         const marginTop = 40;
         const marginRight = 10;
@@ -160,12 +109,10 @@ export class Visual implements IVisual {
             .domain([0, y1Max])
             .range([height, 0]);
 
-        // const xAxis = d3.axisBottom(x).tickSizeOuter(0).tickFormat((d, i) => `${i}`);
 
         const color = d3.scaleSequential(d3.interpolateBlues)
             .domain([-0.5 * n, 1.5 * n]);
 
-        // let svg = this.svg
 
             
            let svg = this.svg.attr("width", width + marginLeft + marginRight)
@@ -187,14 +134,6 @@ export class Visual implements IVisual {
             .attr("width", x.bandwidth())
             .attr("height", 0);
 
-            // rect.transition()
-            //     .duration(500)
-            //     .delay((d, i) => i * 20)
-            //     .attr("x", (d, i) => x(`${i}`) + x.bandwidth() / n * d[2])
-            //     .attr("width", x.bandwidth() / n)
-            //     .transition()
-            //     .attr("y", d => y(d[1] - d[0]))
-            //     .attr("height", d => y(0) - y(d[1] - d[0]));
 
             function transitionGrouped() {
                 y.domain([0, yMax]);
